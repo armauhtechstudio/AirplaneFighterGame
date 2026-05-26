@@ -1,0 +1,62 @@
+Converting script [1 / 5]	[\AirStrike\Scripts\Componet\BasicController.cs]
+	Fragments : 6
+		[ 0] : Line:   14	InputMethod   GetKey              	(KeyCode.W)
+		[ 1] : Line:   17	InputMethod   GetKey              	(KeyCode.A)
+		[ 2] : Line:   20	InputMethod   GetKey              	(KeyCode.S)
+		[ 3] : Line:   23	InputMethod   GetKey              	(KeyCode.D)
+		[ 4] : Line:   26	InputMethod   GetKey              	(KeyCode.Q)
+		[ 5] : Line:   29	InputMethod   GetKey              	(KeyCode.E)
+
+Converting script [2 / 5]	[\AirStrike\Scripts\Componet\MouseLock.cs]
+	Fragments : 5
+		[ 0] : Line:   17	Other mod.	[Screen.lockCursor]
+		[ 1] : Line:   19	Other mod.	[Cursor.visible]
+		[ 2] : Line:   20	Other mod.	[Cursor.visible]
+		[ 3] : Line:   21	Other mod.	[Cursor.lockState]
+		[ 4] : Line:   23	Other mod.	[Cursor.lockState]
+
+Converting script [3 / 5]	[\AirStrike\Scripts\Componet\TouchScreenVal.cs]
+	Fragments : 18
+		[ 0] : Line:   22	InputProperty touchCount          
+		[ 1] : Line:   23	InputMethod   GetTouch            	(i)
+		[ 2] : Line:   27	InputMethod   GetTouch            	(i)
+		[ 3] : Line:   27	InputMethod   GetTouch            	(i)
+		[ 4] : Line:   39	InputProperty touchCount          
+		[ 5] : Line:   40	InputMethod   GetTouch            	(i)
+		[ 6] : Line:   44	InputMethod   GetTouch            	(i)
+		[ 7] : Line:   45	InputMethod   GetTouch            	(i)
+		[ 8] : Line:   45	InputMethod   GetTouch            	(i)
+		[ 9] : Line:   48	InputMethod   GetTouch            	(i)
+		[10] : Line:   48	InputMethod   GetTouch            	(i)
+		[11] : Line:   63	InputProperty touchCount          
+		[12] : Line:   64	InputMethod   GetTouch            	(i)
+		[13] : Line:   69	InputMethod   GetTouch            	(i)
+		[14] : Line:   70	InputMethod   GetTouch            	(i)
+		[15] : Line:   70	InputMethod   GetTouch            	(i)
+		[16] : Line:   73	InputMethod   GetTouch            	(i)
+		[17] : Line:   73	InputMethod   GetTouch            	(i)
+
+Converting script [4 / 5]	[\AirStrike\Scripts\GameManager\GameUI.cs]
+	Fragments : 1
+		[ 0] : Line:   33	InputMethod   GetKeyDown          	(KeyCode.Escape)
+
+Converting script [5 / 5]	[\AirStrike\Scripts\Player\PlayerController.cs]
+	Fragments : 7
+		[ 0] : Line:   64	InputMethod   GetAxis             	("Mouse X")
+		[ 1] : Line:   64	InputMethod   GetAxis             	("Mouse Y")
+		[ 2] : Line:   67	InputMethod   GetAxis             	("Mouse X")
+		[ 3] : Line:   72	InputMethod   GetAxis             	("Horizontal")
+		[ 4] : Line:   73	InputMethod   GetAxis             	("Vertical")
+		[ 5] : Line:   76	InputMethod   GetButton           	("Fire1")
+		[ 6] : Line:   80	InputMethod   GetButtonDown       	("Fire2")
+
+
+5 scripts modified!
+Overwriting actual scripts...
+	[0 / 5] from  [D:/Production/Airplane Fighters/CF2-Data/Script-Backups/2024-01-21-01-06\Assets-After/\AirStrike\Scripts\Componet\BasicController.cs] to [D:/Production/Airplane Fighters/Assets/\AirStrike\Scripts\Componet\BasicController.cs]
+	[1 / 5] from  [D:/Production/Airplane Fighters/CF2-Data/Script-Backups/2024-01-21-01-06\Assets-After/\AirStrike\Scripts\Componet\MouseLock.cs] to [D:/Production/Airplane Fighters/Assets/\AirStrike\Scripts\Componet\MouseLock.cs]
+	[2 / 5] from  [D:/Production/Airplane Fighters/CF2-Data/Script-Backups/2024-01-21-01-06\Assets-After/\AirStrike\Scripts\Componet\TouchScreenVal.cs] to [D:/Production/Airplane Fighters/Assets/\AirStrike\Scripts\Componet\TouchScreenVal.cs]
+	[3 / 5] from  [D:/Production/Airplane Fighters/CF2-Data/Script-Backups/2024-01-21-01-06\Assets-After/\AirStrike\Scripts\GameManager\GameUI.cs] to [D:/Production/Airplane Fighters/Assets/\AirStrike\Scripts\GameManager\GameUI.cs]
+	[4 / 5] from  [D:/Production/Airplane Fighters/CF2-Data/Script-Backups/2024-01-21-01-06\Assets-After/\AirStrike\Scripts\Player\PlayerController.cs] to [D:/Production/Airplane Fighters/Assets/\AirStrike\Scripts\Player\PlayerController.cs]
+
+Overwriting COMPLETED!
