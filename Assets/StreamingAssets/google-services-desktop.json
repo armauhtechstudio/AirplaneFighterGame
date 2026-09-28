@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "9995324114",
+    "firebase_url": "https://aircraft-heroes-warplane-default-rtdb.firebaseio.com",
+    "project_id": "aircraft-heroes-warplane",
+    "storage_bucket": "aircraft-heroes-warplane.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:9995324114:android:5ea1bb0d005bf00ee4fb0b",
+        "android_client_info": {
+          "package_name": "com.ARMAUHTech.AceAircraftHeroesWarAirPlane"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrhWOI_SAyq2n_8Gtb_rO7gv69YgJ1ycs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

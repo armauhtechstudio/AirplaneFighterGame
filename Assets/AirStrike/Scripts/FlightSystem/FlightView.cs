@@ -1,4 +1,4 @@
-﻿/// <summary>
+/// <summary>
 /// Flight view. this script is the Camera Follower
 /// </summary>
 
@@ -60,6 +60,16 @@ public class FlightView : MonoBehaviour
 		}
 	}
 	Vector3 positionTargetUp; 
+
+	public void ResetCameraPosition()
+	{
+		if (!Target) return;
+		positionTargetUp = -Target.transform.forward + (Target.transform.up * Offset.y);
+		Vector3 targetPos = Target.transform.position + (positionTargetUp * Offset.z);
+		this.transform.position = targetPos;
+		this.transform.LookAt(Target.transform.position + Target.transform.forward * Offset.x);
+	}
+
 	void FixedUpdate ()
 	{
 		if (!Target)

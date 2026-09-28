@@ -57,7 +57,53 @@ public class FlightSystem : MonoBehaviour
 		mainRot = this.transform.rotation;
 		GetComponent<Rigidbody>().mass = Mess;
 	}
+
+	public void SetRotation(Quaternion rotation)
+	{
+		this.transform.rotation = rotation;
+		mainRot = rotation;
+		roll = 0;
+		pitch = 0;
+		yaw = 0;
+		if (GetComponent<Rigidbody>()) {
+			GetComponent<Rigidbody>().rotation = rotation;
+		}
+	}
 	
+	private bool disableForwardMovement = false;
+	private Vector3 frozenPosition;
+	private bool originalUseGravity;
+
+	public bool DisableForwardMovement
+	{
+		get { return disableForwardMovement; }
+		set
+		{
+			if (disableForwardMovement != value)
+			{
+				disableForwardMovement = value;
+				if (disableForwardMovement)
+				{
+					frozenPosition = transform.position;
+					if (GetComponent<Rigidbody>())
+					{
+						originalUseGravity = GetComponent<Rigidbody>().useGravity;
+						GetComponent<Rigidbody>().useGravity = false;
+						GetComponent<Rigidbody>().velocity = Vector3.zero;
+						GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+					}
+				}
+				else
+				{
+					if (GetComponent<Rigidbody>())
+					{
+						GetComponent<Rigidbody>().useGravity = originalUseGravity;
+					}
+				}
+			}
+		}
+	}
+
 	void FixedUpdate ()
 	{
 		if (!this.GetComponent<Rigidbody>())
@@ -105,11 +151,21 @@ public class FlightSystem : MonoBehaviour
 			velocityTarget = (GetComponent<Rigidbody>().rotation * Vector3.forward) * (Speed + MoveSpeed);
 			
 		}
-		// add velocity to the riggidbody
-		if(DirectVelocity){
-			GetComponent<Rigidbody>().velocity = velocityTarget;
-		}else{
-			GetComponent<Rigidbody>().velocity = Vector3.Lerp (GetComponent<Rigidbody>().velocity, velocityTarget, Time.fixedDeltaTime * DampingVelocity);
+		if (disableForwardMovement) {
+			velocityTarget = Vector3.zero;
+			if (GetComponent<Rigidbody>()) {
+				GetComponent<Rigidbody>().useGravity = false;
+				GetComponent<Rigidbody>().velocity = Vector3.zero;
+				GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+			}
+			transform.position = frozenPosition;
+		} else {
+			// add velocity to the riggidbody
+			if(DirectVelocity){
+				GetComponent<Rigidbody>().velocity = velocityTarget;
+			}else{
+				GetComponent<Rigidbody>().velocity = Vector3.Lerp (GetComponent<Rigidbody>().velocity, velocityTarget, Time.fixedDeltaTime * DampingVelocity);
+			}
 		}
 		yaw = Mathf.Lerp (yaw, 0, Time.deltaTime);
 		MoveSpeed = Mathf.Lerp (MoveSpeed, Speed, Time.deltaTime);

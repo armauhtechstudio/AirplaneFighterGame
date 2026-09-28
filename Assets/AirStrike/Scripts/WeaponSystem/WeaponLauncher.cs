@@ -159,28 +159,28 @@ public class WeaponLauncher : WeaponBase
 					Unlock ();
 				}
 			}
+		}
 		
-			if (Reloading) {
-				ReloadingProcess = ((1 / ReloadTime) * (reloadTimeTemp + ReloadTime - Time.time));
-				if (Time.time >= reloadTimeTemp + ReloadTime) {
-					Reloading = false;
-					if (SoundReloaded) {
-						if (audioSource) {
-							audioSource.PlayOneShot (SoundReloaded);
-						}
+		if (Reloading) {
+			ReloadingProcess = ((1 / ReloadTime) * (reloadTimeTemp + ReloadTime - Time.time));
+			if (Time.time >= reloadTimeTemp + ReloadTime) {
+				Reloading = false;
+				if (SoundReloaded) {
+					if (audioSource) {
+						audioSource.PlayOneShot (SoundReloaded);
 					}
-					Ammo = AmmoMax;
 				}
-			} else {
-				if (Ammo <= 0) {
-					Unlock ();
-					Reloading = true;
-					reloadTimeTemp = Time.time;
-				
-					if (SoundReloading) {
-						if (audioSource) {
-							audioSource.PlayOneShot (SoundReloading);
-						}
+				Ammo = AmmoMax;
+			}
+		} else {
+			if (Ammo <= 0) {
+				Unlock ();
+				Reloading = true;
+				reloadTimeTemp = Time.time;
+			
+				if (SoundReloading) {
+					if (audioSource) {
+						audioSource.PlayOneShot (SoundReloading);
 					}
 				}
 			}

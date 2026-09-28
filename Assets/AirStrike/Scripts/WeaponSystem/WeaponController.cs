@@ -37,24 +37,47 @@ public class WeaponController : MonoBehaviour
 		}
 	}
 
+	// Indices currently being fired by UI buttons this frame (cleared each frame by GameUI)
+	private System.Collections.Generic.HashSet<int> activeButtonIndices = new System.Collections.Generic.HashSet<int>();
+
 	private void Update ()
 	{
-		
-		for (int i=0; i<WeaponLists.Length; i++) {
+		// Start by marking all weapons inactive
+		for (int i = 0; i < WeaponLists.Length; i++) {
 			if (WeaponLists [i] != null) {
 				WeaponLists [i].OnActive = false;
 			}
 		}
+		// Always keep the selected current weapon active (HUD / reload)
 		if (CurrentWeapon < WeaponLists.Length && WeaponLists [CurrentWeapon] != null) {
 			WeaponLists [CurrentWeapon].OnActive = true;
 		}
-	
+		// Also keep any button-fired weapon active so its reload logic runs
+		foreach (int idx in activeButtonIndices) {
+			if (idx < WeaponLists.Length && WeaponLists [idx] != null) {
+				WeaponLists [idx].OnActive = true;
+			}
+		}
+		// Clear for next frame
+		activeButtonIndices.Clear();
 	}
-	
+
 	public void LaunchWeapon (int index)
 	{
 		CurrentWeapon = index;
 		if (CurrentWeapon < WeaponLists.Length && WeaponLists [index] != null) {
+			WeaponLists [index].Shoot ();
+		}
+	}
+
+	/// <summary>
+	/// Fires the weapon at the given index WITHOUT changing CurrentWeapon.
+	/// Also marks the launcher OnActive this frame so reloading works correctly.
+	/// </summary>
+	public void FireWeaponAtIndex (int index)
+	{
+		if (index < WeaponLists.Length && WeaponLists [index] != null) {
+			activeButtonIndices.Add(index);   // keep OnActive for reload
 			WeaponLists [index].Shoot ();
 		}
 	}
