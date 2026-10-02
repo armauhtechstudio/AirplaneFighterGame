@@ -21,9 +21,28 @@ public class AdsManager : MonoBehaviour
 
     static GameConfigData RC => FirebaseRemoteConfigManager.Config;
 
+    // ------------------------------------------------------------------ Remove Ads
+    // PlayerPrefs "RemoveAds" == 1: the SDK still initializes but only the rewarded ads (the player's
+    // choice, e.g. the revive) are loaded and shown. App open, banners, MREC and interstitials are never
+    // loaded or shown, even one that is already loaded (e.g. bought during this session).
+
+    public const string RemoveAdsKey = "RemoveAds";
+    public static bool AdsRemoved => PlayerPrefs.GetInt(RemoveAdsKey, 0) == 1;
+
+    /// <summary>Call after the Remove Ads purchase: saves it and takes down what is on screen now.</summary>
+    public void RemoveAdsNow()
+    {
+        PlayerPrefs.SetInt(RemoveAdsKey, 1);
+        PlayerPrefs.Save();
+        if (BannerAdManager.Instance != null) BannerAdManager.Instance.DestroyBanner();
+        if (BannerAdManager2.Instance != null) BannerAdManager2.Instance.DestroyBanner();
+        HideMRecView();
+        Debug.Log("[AdsManager] Ads removed.");
+    }
+
     /// <summary>App open ad when the game returns from the background (not the launch app open).</summary>
     public static bool CanShowAppOpenFromBackground =>
-        (Instance == null || Instance.enableAppOpen) && (RC == null || RC.AppOpenFromBackground);
+        !AdsRemoved && (Instance == null || Instance.enableAppOpen) && (RC == null || RC.AppOpenFromBackground);
 
     public bool TopBannerAllowed => enableBanner && (RC == null || RC.TopBanner);
     public bool MRecAllowed => enableMRec && (RC == null || RC.IsMedRect);
@@ -36,14 +55,14 @@ public class AdsManager : MonoBehaviour
     /// <summary>Called by InterstitialAdManager when an interstitial has been closed.</summary>
     public void OnInterstitialClosed()
     {
-        if (!AppOpenAfterInterstitialAllowed || AppOpenAdManager.Instance == null) return;
+        if (AdsRemoved || !AppOpenAfterInterstitialAllowed || AppOpenAdManager.Instance == null) return;
         StartCoroutine(ShowAppOpenAfterInterstitial());
     }
 
     System.Collections.IEnumerator ShowAppOpenAfterInterstitial()
     {
         yield return new WaitForSecondsRealtime(appOpenAfterInterstitialDelay);
-        if (PlayerPrefs.GetInt("RemoveAds", 0) == 1) yield break;
+        if (AdsRemoved) yield break;
         Debug.Log("[AdsManager] Interstitial closed -> app open (AppOpenAfterInterstitial).");
         AppOpenAdManager.Instance.ShowAdIfAvailable();
     }
@@ -66,6 +85,7 @@ public class AdsManager : MonoBehaviour
     // The config usually arrives after the ads were loaded: bring what's on screen in line with it
     void ApplyRemoteConfig(GameConfigData config)
     {
+        if (AdsRemoved) return;
         Debug.Log($"[AdsManager] Remote config: AppOpenFromBackground={config.AppOpenFromBackground} TopBanner={config.TopBanner} IsMedRect={config.IsMedRect} IsInterstialAd={config.IsInterstialAd}");
 
         if (BannerAdManager.Instance != null)
@@ -101,7 +121,7 @@ public class AdsManager : MonoBehaviour
 
     private void InitializeAds()
     {
-        Debug.Log("Initializing Google Mobile Ads SDK...");
+        Debug.Log("Initializing Google Mobile Ads SDK..." + (AdsRemoved ? " (ads removed: rewarded ads only)" : ""));
         // Ad callbacks (closed, failed, loaded...) arrive on Unity's main thread, so they can safely
         // show the next ad / touch Unity objects
         MobileAds.RaiseAdEventsOnUnityMainThread = true;
@@ -116,17 +136,20 @@ public class AdsManager : MonoBehaviour
 
     public void LoadAllAds()
     {
-        if (enableAppOpen && AppOpenAdManager.Instance != null)
-            AppOpenAdManager.Instance.LoadAd();
-
-        if (InterstitialAllowed && InterstitialAdManager.Instance != null)
-            InterstitialAdManager.Instance.LoadAd();
-
+        // Rewarded ads always (also with Remove Ads)
         if (enableRewarded && RewardedAdManager.Instance != null)
             RewardedAdManager.Instance.LoadAd();
 
         if (enableRewardedInterstitial && RewardedInterstitialAdManager.Instance != null)
             RewardedInterstitialAdManager.Instance.LoadAd();
+
+        if (AdsRemoved) return; // everything below is removed by Remove Ads
+
+        if (enableAppOpen && AppOpenAdManager.Instance != null)
+            AppOpenAdManager.Instance.LoadAd();
+
+        if (InterstitialAllowed && InterstitialAdManager.Instance != null)
+            InterstitialAdManager.Instance.LoadAd();
 
         if (TopBannerAllowed && wantTopBanner && BannerAdManager.Instance != null)
             BannerAdManager.Instance.LoadBanner();
@@ -151,7 +174,7 @@ public class AdsManager : MonoBehaviour
 
     public void ShowInterstitial()
     {
-        if (!InterstitialAllowed) return;
+        if (AdsRemoved || !InterstitialAllowed) return;
 
         if (InterstitialAdManager.Instance != null)
         {
@@ -219,7 +242,7 @@ public class AdsManager : MonoBehaviour
     public void ShowBanner()
     {
         wantTopBanner = true;
-        if (!TopBannerAllowed) return;
+        if (AdsRemoved || !TopBannerAllowed) return;
 
         if (BannerAdManager.Instance != null)
         {
@@ -242,7 +265,7 @@ public class AdsManager : MonoBehaviour
 
     public void ShowBanner2()
     {
-        if (!enableBanner2) return;
+        if (AdsRemoved || !enableBanner2) return;
 
         if (BannerAdManager2.Instance != null)
         {
@@ -266,7 +289,7 @@ public class AdsManager : MonoBehaviour
     public void ShowMRec()
     {
         wantMRec = true;
-        if (!MRecAllowed) return;
+        if (AdsRemoved || !MRecAllowed) return;
         ShowMRecView();
     }
 
@@ -278,6 +301,7 @@ public class AdsManager : MonoBehaviour
 
     void ShowMRecView()
     {
+        if (AdsRemoved) return;
         if (MRecAdManager.Instance == null)
         {
             Debug.LogWarning("MRecAdManager Instance is null.");
@@ -296,7 +320,7 @@ public class AdsManager : MonoBehaviour
 
     public void ShowAppOpen()
     {
-        if (!enableAppOpen) return;
+        if (AdsRemoved || !enableAppOpen) return;
 
         if (AppOpenAdManager.Instance != null)
         {

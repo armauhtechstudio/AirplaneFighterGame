@@ -17,10 +17,10 @@ public class TutorialManager : MonoBehaviour
     [Header("UI Instructions")]
     public Text tutorialText;
 
-    [Header("Shoot Button Focus")]
-    [Tooltip("Highlighted (rest of the screen dimmed) when the shooting part starts. Found by name if left empty.")]
+    [Header("Rockets Button Focus")]
+    [Tooltip("Highlighted (rest of the screen dimmed) when the balloon part starts. Found by its FireRocket click action (or name) if left empty.")]
     public Button shootButton;
-    public string shootButtonName = "Shoot";
+    public string shootButtonName = "Rockets";
     private TutorialShootFocus shootFocus;
 
     [Header("Tutorial State")]
@@ -124,6 +124,7 @@ public class TutorialManager : MonoBehaviour
                 }
 
                 currentCheckpointIndex++;
+                GameSfx.Checkpoint();
 
                 if (currentCheckpointIndex >= 4 || currentCheckpointIndex >= checkpoints.Length)
                 {
@@ -158,24 +159,31 @@ public class TutorialManager : MonoBehaviour
         ActivateCurrentBalloon();
         UpdateUI();
 
-        // Last checkpoint passed: now the player has to shoot — spotlight the Shoot button
-        shootFocus = TutorialShootFocus.Show(FindShootButton());
+        // Last checkpoint passed: now the player has to fire rockets — spotlight the ROCKETS button
+        shootFocus = TutorialShootFocus.Show(FindShootButton(), "Press the ROCKETS button to fire!");
     }
 
+    // The ROCKETS button: the one whose click calls GameUI.FireRocket (any name), else by name
     private Button FindShootButton()
     {
         if (shootButton != null) return shootButton;
-        foreach (Button b in FindObjectsOfType<Button>())
+        Button[] buttons = FindObjectsOfType<Button>();
+        foreach (Button b in buttons)
         {
-            if (b.name == shootButtonName)
-            {
-                shootButton = b;
-                break;
-            }
+            for (int i = 0; i < b.onClick.GetPersistentEventCount(); i++)
+                if (b.onClick.GetPersistentMethodName(i) == "FireRocket") { shootButton = b; return shootButton; }
+
+            var trigger = b.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+            if (trigger != null)
+                foreach (var entry in trigger.triggers)
+                    for (int i = 0; i < entry.callback.GetPersistentEventCount(); i++)
+                        if (entry.callback.GetPersistentMethodName(i) == "FireRocket") { shootButton = b; return shootButton; }
         }
-        if (shootButton == null)
-            Debug.LogWarning($"[TutorialManager] Shoot button \"{shootButtonName}\" not found; no shoot highlight.");
-        return shootButton;
+        foreach (Button b in buttons)
+            if (b.name == shootButtonName) { shootButton = b; return shootButton; }
+
+        Debug.LogWarning($"[TutorialManager] Rockets button (FireRocket / \"{shootButtonName}\") not found; no highlight.");
+        return null;
     }
 
     private void ActivateCurrentBalloon()
@@ -284,11 +292,7 @@ public class TutorialManager : MonoBehaviour
         }
         else if (currentState == TutorialState.HotAirBalloons)
         {
-            string switchPrompt = weaponSwitchedForCurrentTarget
-                ? "Weapon Changed! Fire to destroy Hot Air Balloon!"
-                : "Switch Weapon first!";
-
-            tutorialText.text = $"TUTORIAL: Balloon ({currentBalloonIndex + 1}/3) - {switchPrompt}";
+            tutorialText.text = $"TUTORIAL: Balloon ({currentBalloonIndex + 1}/3) - Press ROCKETS to destroy the Hot Air Balloon!";
         }
     }
 }

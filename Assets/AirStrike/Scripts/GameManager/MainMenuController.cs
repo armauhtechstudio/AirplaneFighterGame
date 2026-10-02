@@ -72,6 +72,12 @@ public class MainMenuController : MonoBehaviour
     [Tooltip("Optional: the menu Logo. Gets a PunchyLogo component added automatically for a punchy pop-in + idle kick.")]
     public RectTransform logo;
 
+    [Header("Remove Ads")]
+    [Tooltip("The REMOVE ADS button: hidden once ads are removed.")]
+    public GameObject removeAdsButton;
+    [Tooltip("The REMOVE ADS offer popup (shown on the mode selection): closed once ads are removed.")]
+    public RemoveAdsOfferPanel removeAdsOffer;
+
     [Header("Loading Screen")]
     public GameObject loadingPanel;
     public Image loadingFillImage;
@@ -101,8 +107,35 @@ public class MainMenuController : MonoBehaviour
         Instance = this;
     }
 
+    // -------------------------------------------------------------------------
+    // Remove Ads
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Call when the Remove Ads purchase succeeds: saves RemoveAds = 1, takes down the banners / MREC and
+    /// hides the REMOVE ADS button. From then on only rewarded ads (the player's choice) are shown.
+    /// Not wired to anything: call it from your purchase code.
+    /// </summary>
+    public void RemoveAdsFromGame()
+    {
+        if (AdsManager.Instance != null)
+            AdsManager.Instance.RemoveAdsNow(); // saves the flag + destroys banners, hides the MREC
+        else
+        {
+            PlayerPrefs.SetInt(AdsManager.RemoveAdsKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        if (removeAdsButton != null) removeAdsButton.SetActive(false);
+        if (removeAdsOffer != null) removeAdsOffer.Close();
+        Debug.Log("[MainMenuController] Ads removed.");
+    }
+
     private void Start()
     {
+        // Already bought: no Remove Ads button
+        if (removeAdsButton != null && AdsManager.AdsRemoved) removeAdsButton.SetActive(false);
+
         // Ensure level 1 is always unlocked on first run
         if (!PlayerPrefs.HasKey(KEY_MOD1_UNLOCKED))
             PlayerPrefs.SetInt(KEY_MOD1_UNLOCKED, 1);
@@ -235,6 +268,7 @@ public class MainMenuController : MonoBehaviour
 
         PlayerPrefs.SetInt(KEY_MOD1_SELECTED_LEVEL, levelIndex);
         PlayerPrefs.Save();
+        GameManager.LevelChosenInGame = true; // overrides the scene's isTest / tempLvl
 
         Debug.Log($"[MainMenuController] Mod 1 – Level {levelIndex} selected. Loading: {mod1SceneName}");
         StartCoroutine(ShowLoadingScreenRoutine(() => {
@@ -324,6 +358,7 @@ public class MainMenuController : MonoBehaviour
 
         PlayerPrefs.SetInt(KEY_MOD2_SELECTED_LEVEL, levelIndex);
         PlayerPrefs.Save();
+        GameManagerMode2.LevelChosenInGame = true; // overrides the scene's isTest / tempLvl
 
         Debug.Log($"[MainMenuController] Mod 2 – Level {levelIndex} selected. Loading: {mod2SceneName}");
         StartCoroutine(ShowLoadingScreenRoutine(() => {

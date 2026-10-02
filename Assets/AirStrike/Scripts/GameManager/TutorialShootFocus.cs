@@ -3,13 +3,13 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// Tutorial spotlight for the Shoot button: dims the whole screen to 50% black, keeps the Shoot
-// button bright (drawn above the dim) and pulsing, and shows a "press SHOOT" hint next to it.
-// Added to the Shoot button by TutorialManager; removes itself on the first press.
+// Tutorial spotlight for a weapon button (the ROCKETS button in the Classic tutorial): dims the whole
+// screen to 50% black, keeps the button bright (drawn above the dim) and pulsing, and shows a hint next
+// to it. Added to the button by TutorialManager; removes itself on the first press.
 public class TutorialShootFocus : MonoBehaviour, IPointerDownHandler
 {
     const int OverlayOrder = 500;
-    const string Message = "Press the SHOOT button on the right side to fire!";
+    string message = "Press the SHOOT button on the right side to fire!";
 
     GameObject overlay;
     Canvas buttonCanvas;
@@ -17,11 +17,12 @@ public class TutorialShootFocus : MonoBehaviour, IPointerDownHandler
     Vector3 baseScale;
     Coroutine pulse;
 
-    public static TutorialShootFocus Show(Button shootButton)
+    public static TutorialShootFocus Show(Button button, string hint = null)
     {
-        if (shootButton == null) return null;
-        var focus = shootButton.GetComponent<TutorialShootFocus>();
-        if (focus == null) focus = shootButton.gameObject.AddComponent<TutorialShootFocus>();
+        if (button == null) return null;
+        var focus = button.GetComponent<TutorialShootFocus>();
+        if (focus == null) focus = button.gameObject.AddComponent<TutorialShootFocus>();
+        if (!string.IsNullOrEmpty(hint)) focus.message = hint; // read in Start, when the hint is built
         return focus;
     }
 
@@ -149,7 +150,7 @@ public class TutorialShootFocus : MonoBehaviour, IPointerDownHandler
         text.horizontalOverflow = HorizontalWrapMode.Wrap;
         text.verticalOverflow = VerticalWrapMode.Overflow;
         text.raycastTarget = false;
-        text.text = Message + "  →";
+        text.text = message + "  →";
         hint.GetComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.8f);
     }
 

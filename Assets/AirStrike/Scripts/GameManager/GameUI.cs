@@ -181,6 +181,7 @@ public class GameUI : MonoBehaviour
             play.Active = false;
 
         failPanel.SetActive(true);
+        GameSfx.Fail();
         Time.timeScale = 0;
 
     }
@@ -235,7 +236,12 @@ public class GameUI : MonoBehaviour
 		{
 			if (objectiveText != null)
 			{
-				objectiveText.text = text;
+				// "LEVEL OBJECTIVE\nDestroy ..." -> first line as a gold heading
+				int newline = text != null ? text.IndexOf('\n') : -1;
+				objectiveText.supportRichText = true;
+				objectiveText.text = newline > 0
+					? $"<color=#FFCC33>{text.Substring(0, newline)}</color>\n{text.Substring(newline + 1)}"
+					: text;
 			}
 			objectivePanel.SetActive(true);
 			Time.timeScale = 0;

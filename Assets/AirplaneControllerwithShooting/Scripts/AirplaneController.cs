@@ -238,7 +238,10 @@ namespace AirplaneControllerwithShooting
                 }
                 else if(Speed > 10)
                 {
-                    Gasoline.Instance.CurrentFuel = Gasoline.Instance.CurrentFuel - Speed * Time.deltaTime * Gasoline.Instance.FuelConsumptionRate;
+                    // Mode 3 (Open World): long runs and no fuel pickups, so the tank never drains there
+                    bool openWorld = GameManagerMode2.instance != null && GameManagerMode2.instance.IsOpenWorld;
+                    if (!openWorld)
+                        Gasoline.Instance.CurrentFuel = Gasoline.Instance.CurrentFuel - Speed * Time.deltaTime * Gasoline.Instance.FuelConsumptionRate;
                     Rigidbody.useGravity = false;
                 }
                 else if (Speed <= 10)
@@ -306,6 +309,8 @@ namespace AirplaneControllerwithShooting
         }
 
         bool isDead = false;
+        /// <summary>Crashed, waiting to respawn (the plane model is hidden).</summary>
+        public bool IsDead => isDead;
         void ExplodePlane()
         {
             if (isDead) return;

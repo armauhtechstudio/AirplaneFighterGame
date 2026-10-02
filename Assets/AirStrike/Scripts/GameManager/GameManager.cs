@@ -54,7 +54,10 @@ public class GameManager : MonoBehaviour {
     protected bool winCond = false;
     protected int toKill;
 
+    [Tooltip("Editor only: pressing Play directly in this scene starts level tempLvl (menu / Next still pick the level).")]
     public bool isTest = false;
+    /// <summary>Set by the level-select menu and Next: the level in PlayerPrefs is the one to play.</summary>
+    public static bool LevelChosenInGame;
     public int tempLvl = 0;
     protected int planeToKill = 0;
     protected int generatorsToKill = 0;
@@ -68,7 +71,7 @@ public class GameManager : MonoBehaviour {
     protected virtual string SelectedLevelKey => "Mod1_SelectedLevel";
     protected virtual string UnlockedLevelsKey => "Mod1_UnlockedLevels";
     protected virtual void Start () {
-        if (isTest)
+        if (isTest && Application.isEditor && !LevelChosenInGame) // Editor-only test level; menu / Next win
         {
             currentLevelIndex = tempLvl;
         }
@@ -114,7 +117,7 @@ public class GameManager : MonoBehaviour {
         string textToShow = req.objective;
         if (string.IsNullOrEmpty(textToShow)) {
             if (req.isTutorial) {
-                textToShow = "TUTORIAL LEVEL\nComplete the checkpoints & hot air balloon target practice!";
+                textToShow = "TUTORIAL LEVEL\nFly through the checkpoints, then use ROCKETS to destroy the hot air balloons!";
             } else if (req.hasCargo) {
                 textToShow = "ESCORT OBJECTIVE\nProtect and escort the cargo to the destination!";
             } else {
@@ -253,7 +256,7 @@ public class GameManager : MonoBehaviour {
         Time.timeScale = 1;
 
         // Last level finished: no next level, go back to the main menu
-        int nextLevel = PlayerPrefs.GetInt(SelectedLevelKey, 0) + 1;
+        int nextLevel = currentLevelIndex + 1; // the level actually played, not the last menu choice
         if (nextLevel >= levels.Length)
         {
             SceneManager.LoadScene(mainMenuSceneName);
@@ -261,6 +264,8 @@ public class GameManager : MonoBehaviour {
         }
 
         PlayerPrefs.SetInt(SelectedLevelKey, nextLevel);
+        PlayerPrefs.Save();
+        LevelChosenInGame = true;
         currentLevelIndex = nextLevel;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
@@ -285,6 +290,7 @@ public class GameManager : MonoBehaviour {
     }
     public virtual void AddScore(int score, string objDestroyed){
 		Score += score;
+        GameSfx.Score();
         if (objDestroyed == "plane")
         {
             planeToKill -= 1;
@@ -310,7 +316,7 @@ public class GameManager : MonoBehaviour {
 		// (MainMenuController lives in the Main Menu scene, so we write PlayerPrefs here directly)
 		if (PlayerPrefs.GetInt("SelectedMod", 1) == SelectedModIndex)
 		{
-			int completedLevel    = PlayerPrefs.GetInt(SelectedLevelKey, 0);
+			int completedLevel    = currentLevelIndex;
 			int currentlyUnlocked = PlayerPrefs.GetInt(UnlockedLevelsKey, 1);
 			int nextLevel         = completedLevel + 1;
 
@@ -324,6 +330,8 @@ public class GameManager : MonoBehaviour {
 
 		LogLevelResult(true);
 		GameUI.instance.winPanel.SetActive(true);
+		GameSfx.Win();
+		GameNotifications.RequestPermissionIfNeeded(); // a good moment to ask (Android 13+ / iOS)
 		Time.timeScale = 0;
 		StoreReview.OnLevelWon(SelectedModIndex, currentLevelIndex);
 	}
@@ -425,7 +433,7 @@ public class GameManager : MonoBehaviour {
             if (!reviveAdPending) left -= Mathf.Min(Time.unscaledDeltaTime, 0.1f);
 
             int number = Mathf.CeilToInt(left);
-            if (number != shown) { shown = number; pop = 1f; } // pop the number each second
+            if (number != shown) { shown = number; pop = 1f; if (number > 0) GameSfx.Tick(); } // pop the number each second
             pop = Mathf.Max(0f, pop - Time.unscaledDeltaTime * 5f);
 
             if (reviveTimerText != null)
@@ -498,6 +506,7 @@ public class GameManager : MonoBehaviour {
         if (!IsReviveOpen || reviveAnswered) return;
         reviveAnswered = true;
         revivesUsed++;
+        GameSfx.Revive();
         revivePanel.SetActive(false);
 
         PlayerController player = FindObjectOfType<PlayerController>();

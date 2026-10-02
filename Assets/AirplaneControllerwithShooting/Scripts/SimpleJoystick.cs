@@ -65,12 +65,52 @@ namespace AirplaneControllerwithShooting
             }
         }
 
+        // On phones the EventSystem's drag doesn't always start (the same problem the engine slider had),
+        // so after the press the stick follows that finger directly, every frame, until it lifts.
+        private bool _tracking;
+        private int _pointerId;
+
+        private void Update()
+        {
+            if (!_tracking) return;
+            if (TryGetPointer(out Vector2 position)) MoveStickTo(position);
+            else Release(); // finger lifted / cancelled (in case OnPointerUp didn't arrive)
+        }
+
+        // Touch pointers use the finger id; mouse pointers (editor) are negative ids
+        private bool TryGetPointer(out Vector2 position)
+        {
+            if (_pointerId >= 0)
+            {
+                for (int i = 0; i < Input.touchCount; i++)
+                {
+                    Touch t = Input.GetTouch(i);
+                    if (t.fingerId != _pointerId) continue;
+                    position = t.position;
+                    return t.phase != TouchPhase.Ended && t.phase != TouchPhase.Canceled;
+                }
+                position = default;
+                return false;
+            }
+            position = Input.mousePosition;
+            return Input.GetMouseButton(0);
+        }
+
+        private void OnDisable()
+        {
+            if (_tracking) Release();
+        }
+
         public virtual void OnDrag(PointerEventData eventData)
         {
             CurrentEventCamera = eventData.pressEventCamera ?? CurrentEventCamera;
+            MoveStickTo(eventData.position);
+        }
 
+        private void MoveStickTo(Vector2 screenPosition)
+        {
             Vector3 worldJoystickPosition;
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(_stickTransform, eventData.position,
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(_stickTransform, screenPosition,
                 CurrentEventCamera, out worldJoystickPosition);
 
             _stickTransform.position = worldJoystickPosition;
@@ -118,6 +158,13 @@ namespace AirplaneControllerwithShooting
 
         public void OnPointerUp(PointerEventData eventData)
         {
+            if (_tracking && eventData.pointerId != _pointerId) return; // another finger
+            Release();
+        }
+
+        private void Release()
+        {
+            _tracking = false;
             _baseTransform.anchoredPosition = _initialBasePosition;
             _stickTransform.anchoredPosition = _initialStickPosition;
             _intermediateStickPosition = _initialStickPosition;
@@ -132,6 +179,11 @@ namespace AirplaneControllerwithShooting
 
         public void OnPointerDown(PointerEventData eventData)
         {
+            if (_tracking) return; // already steered by another finger
+            _tracking = true;
+            _pointerId = eventData.pointerId;
+            CurrentEventCamera = eventData.pressEventCamera ?? CurrentEventCamera;
+
             if (HideOnRelease)
             {
                 Hide(false);

@@ -56,6 +56,13 @@ public class Mod3LeaderboardManager : MonoBehaviour
         pendingScore = finalScore;
         onDone = done;
 
+        // Nothing scored: no name to ask for and nothing to upload (the panel waits for a run that scores)
+        if (finalScore <= 0)
+        {
+            Finish();
+            return;
+        }
+
         if (!NameSubmitted && namePanel != null)
         {
             OpenNamePanel();

@@ -117,8 +117,12 @@ public class GameManagerMode2 : MonoBehaviour
     public Mod3LeaderboardManager leaderboard;
     bool IsLeaderboardOpen => leaderboard != null && leaderboard.IsOpen;
 
+    [Tooltip("Editor only: pressing Play directly in this scene starts level tempLvl (menu / Next still pick the level).")]
     public bool isTest = false;
     public int tempLvl = 0;
+
+    /// <summary>Set by the level-select menu and Next: the level in PlayerPrefs is the one to play.</summary>
+    public static bool LevelChosenInGame;
 
     int currentLevelIndex = 0;
     bool winCond = false;
@@ -160,6 +164,7 @@ public class GameManagerMode2 : MonoBehaviour
     void Start()
     {
         hud = SickscoreGames.HUDNavigationSystem.HUDNavigationSystem.Instance;
+        IgnoreTouchesOnHudMarkers();
         ApplySceneryDrawDistance();
 
         IsOpenWorld =openWorldRoot != null &&
@@ -176,7 +181,9 @@ public class GameManagerMode2 : MonoBehaviour
             return;
         }
 
-        if (isTest)
+        // isTest / tempLvl: only when Play is pressed directly in this scene in the Editor. A level picked
+        // in the menu or reached with Next always wins, and builds never use tempLvl.
+        if (isTest && Application.isEditor && !LevelChosenInGame)
         {
             currentLevelIndex = tempLvl;
         }
@@ -243,6 +250,7 @@ public class GameManagerMode2 : MonoBehaviour
         if (!UsesLives) return false;
 
         livesLeft = Mathf.Max(0, livesLeft - 1);
+        GameSfx.HeartLost();
         UpdateHeartsUI();
         if (heartsPunch != null) StopCoroutine(heartsPunch);
         heartsPunch = StartCoroutine(PunchHearts());
@@ -280,7 +288,7 @@ public class GameManagerMode2 : MonoBehaviour
             if (!reviveAdPending) left -= Mathf.Min(Time.unscaledDeltaTime, 0.1f);
 
             int number = Mathf.CeilToInt(left);
-            if (number != shown) { shown = number; pop = 1f; } // pop the number each second
+            if (number != shown) { shown = number; pop = 1f; if (number > 0) GameSfx.Tick(); } // pop the number each second
             pop = Mathf.Max(0f, pop - Time.unscaledDeltaTime * 5f);
 
             if (reviveTimerText != null)
@@ -353,6 +361,7 @@ public class GameManagerMode2 : MonoBehaviour
         if (!IsReviveOpen || reviveAnswered) return;
         reviveAnswered = true;
         revivesUsed++;
+        GameSfx.Revive();
         revivePanel.SetActive(false);
 
         livesLeft = maxLives;
@@ -408,15 +417,66 @@ public class GameManagerMode2 : MonoBehaviour
         else GameAnalytics.LevelFail(ModIndex, currentLevelIndex);
     }
 
+    GameObject zeroScoreNote;
+
+    // Open World run that scored nothing: no name panel was shown, so say why on the fail panel
+    void ShowZeroScoreNote(bool show)
+    {
+        if (!show)
+        {
+            if (zeroScoreNote != null) zeroScoreNote.SetActive(false);
+            return;
+        }
+        if (failPanel == null) return;
+
+        if (zeroScoreNote == null)
+        {
+            Transform plate = failPanel.transform.Find("bg");
+            Font font = housesText != null ? housesText.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var root = new GameObject("ZeroScoreNote", typeof(RectTransform));
+            var rt = (RectTransform)root.transform;
+            rt.SetParent(plate != null ? plate : failPanel.transform, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0f, plate != null ? 178f : 300f); // between the header and RESTART
+            rt.sizeDelta = new Vector2(600f, 130f);
+
+            NoteLine(rt, "YOUR SCORE: 0", font, 50, new Color(1f, 0.80f, 0.20f), new Vector2(0f, 28f));
+            NoteLine(rt, "Score points to get on the leaderboard!", font, 24, Color.white, new Vector2(0f, -28f));
+            zeroScoreNote = root;
+        }
+        zeroScoreNote.SetActive(true);
+    }
+
+    static void NoteLine(RectTransform parent, string text, Font font, int size, Color color, Vector2 pos)
+    {
+        var go = new GameObject("Line", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchoredPosition = pos;
+        rt.sizeDelta = new Vector2(600f, 60f);
+        var t = go.AddComponent<Text>();
+        t.text = text;
+        t.font = font;
+        t.fontSize = size;
+        t.color = color;
+        t.alignment = TextAnchor.MiddleCenter;
+        t.horizontalOverflow = HorizontalWrapMode.Overflow;
+        t.raycastTarget = false;
+        go.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.75f);
+    }
+
     void ShowFailPanel()
     {
         LogLevelResult(false);
+        ShowZeroScoreNote(IsOpenWorld && Score <= 0);
         var plane = AirplaneControllerwithShooting.AirplaneController.Instance;
         if (plane != null) Destroy(plane.gameObject);
         if (AirplaneControllerwithShooting.GameCanvas.Instance != null)
             AirplaneControllerwithShooting.GameCanvas.Instance.Hide_GameUI();
 
         if (failPanel != null) failPanel.SetActive(true);
+        GameSfx.Fail();
         Time.timeScale = 0f;
     }
 
@@ -545,7 +605,7 @@ public class GameManagerMode2 : MonoBehaviour
         {
             if (req.isTutorial)
             {
-                textToShow = "TUTORIAL LEVEL\nComplete the checkpoints & hot air balloon target practice!";
+                textToShow = "TUTORIAL LEVEL\nFly through the checkpoints, then use ROCKETS to destroy the hot air balloons!";
             }
             else if (req.hasCargo)
             {
@@ -629,10 +689,31 @@ public class GameManagerMode2 : MonoBehaviour
         currentWaypointIndex = 0;
     }
 
+    // The HUD markers (off-screen arrows line up along the screen edges, over the joystick) only show
+    // information: let touches go through them to the joystick / buttons
+    static void IgnoreTouchesOnHudMarkers()
+    {
+        foreach (var hudCanvas in FindObjectsOfType<SickscoreGames.HUDNavigationSystem.HUDNavigationCanvas>(true))
+            foreach (GraphicRaycaster raycaster in hudCanvas.GetComponentsInChildren<GraphicRaycaster>(true))
+                raycaster.enabled = false;
+    }
+
     void Update()
     {
-        HUDVisibility.Sync(hud, pausePanel, winPanel, failPanel, revivePanel, leaderboard != null ? leaderboard.namePanel : null,
+        bool panelOpen = HUDVisibility.AnyOpen(pausePanel, winPanel, failPanel, revivePanel,
+            leaderboard != null ? leaderboard.namePanel : null,
             GameUI.instance != null ? GameUI.instance.objectivePanel : null);
+        HUDVisibility.Sync(hud, panelOpen);
+        // Hearts and the Open World score sit above the popups on the canvas: hide them while one is open
+        if (heartsRoot != null) HUDVisibility.ShowUnlessPanel(heartsRoot.gameObject, panelOpen);
+        if (IsOpenWorld) HUDVisibility.ShowUnlessPanel(scorePanel, panelOpen);
+
+        // Open World: fuel never drains there, so no fuel gauge (a respawn switches it back on)
+        if (IsOpenWorld)
+        {
+            var canvas = AirplaneControllerwithShooting.GameCanvas.Instance;
+            if (canvas != null && canvas.GasolineUI != null && canvas.GasolineUI.activeSelf) canvas.GasolineUI.SetActive(false);
+        }
 
         if (IsOpenWorld) return;
         if (currentLevelIndex >= destroyRequirementsMode2.Length) return;
@@ -715,7 +796,7 @@ public class GameManagerMode2 : MonoBehaviour
         Time.timeScale = 1;
 
         // Last level finished: no next level, go back to the main menu
-        int nextLevel = PlayerPrefs.GetInt(SelectedLevelKey, 0) + 1;
+        int nextLevel = currentLevelIndex + 1; // the level actually played, not the last menu choice
         if (nextLevel >= levels.Length)
         {
             SceneManager.LoadScene(mainMenuSceneName);
@@ -723,6 +804,8 @@ public class GameManagerMode2 : MonoBehaviour
         }
 
         PlayerPrefs.SetInt(SelectedLevelKey, nextLevel);
+        PlayerPrefs.Save();
+        LevelChosenInGame = true;
         currentLevelIndex = nextLevel;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
@@ -800,6 +883,7 @@ public class GameManagerMode2 : MonoBehaviour
 
     public void AddScore(int score, string objDestroyed)
     {
+        GameSfx.Score();
         if (IsOpenWorld)
         {
             AddOpenWorldScore(score, objDestroyed);
@@ -847,7 +931,7 @@ public class GameManagerMode2 : MonoBehaviour
 
         if (PlayerPrefs.GetInt("SelectedMod", 1) == ModIndex)
         {
-            int completedLevel = PlayerPrefs.GetInt(SelectedLevelKey, 0);
+            int completedLevel = currentLevelIndex;
             int currentlyUnlocked = PlayerPrefs.GetInt(UnlockedLevelsKey, 1);
             int nextLevel = completedLevel + 1;
 
@@ -865,6 +949,8 @@ public class GameManagerMode2 : MonoBehaviour
         if (player != null) player.Active = false;
 
         if (winPanel != null) winPanel.SetActive(true);
+        GameSfx.Win();
+        GameNotifications.RequestPermissionIfNeeded(); // a good moment to ask (Android 13+ / iOS)
         Time.timeScale = 0;
         StoreReview.OnLevelWon(ModIndex, currentLevelIndex);
     }
@@ -884,6 +970,7 @@ public class GameManagerMode2 : MonoBehaviour
         if (player != null) player.Active = false;
 
         if (failPanel != null) failPanel.SetActive(true);
+        GameSfx.Fail();
         Time.timeScale = 0;
     }
 }

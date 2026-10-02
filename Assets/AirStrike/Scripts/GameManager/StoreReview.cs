@@ -4,9 +4,11 @@ using UnityEngine;
 using Google.Play.Review;
 #endif
 
-// Native "rate this app" prompt (Google Play In-App Review / iOS SKStoreReviewController), requested
-// when the win panel of a milestone level shows (level 2 in Mode 1 and Mode 2). On the first genuine
-// attempt it takes the slot of the interstitial on the Next button.
+// "Rate us" flow, at the win panel of a milestone level (level 2 in Mode 1 and Mode 2) and before the
+// fail panel of the 2nd Open World run: the RateUsPanel (5 stars) shows first. 4-5 stars -> the native
+// store review (Google Play In-App Review / iOS SKStoreReviewController) opens; 1-3 stars -> thanks,
+// the game continues. Once the player has rated (any number of stars) they are never asked again.
+// On the first genuine attempt it takes the slot of the interstitial on the Next button.
 //
 // The stores rate-limit (Play: ~1 prompt per user per month) and never say whether a dialog was shown,
 // so a request is only a request. In the Editor nothing is shown.
@@ -26,10 +28,16 @@ public class StoreReview : MonoBehaviour
     const string KeyAdSkipUsed = "StoreReview_AdSkipUsed";     // the interstitial was skipped once already
     const string KeyOpenWorldRuns = "StoreReview_OpenWorldRuns";
     const string KeyOpenWorldAsked = "StoreReview_OpenWorldAsked";
+    const string KeyRated = "StoreReview_Rated";           // the player picked a star rating: never ask again
+    const string KeyRating = "StoreReview_Rating";         // the stars they gave (1-5)
+
+    /// <summary>The player has rated in the Rate Us panel (any number of stars).</summary>
+    public static bool HasRated => PlayerPrefs.GetInt(KeyRated, 0) == 1;
 
     static StoreReview instance;
     static bool skipNextAd;
-    bool requesting;
+    bool requesting;      // a rate-us flow is running
+    bool nativeRunning;   // the store review flow is running
 
     static StoreReview Instance
     {
@@ -56,7 +64,7 @@ public class StoreReview : MonoBehaviour
     {
         int level = levelIndex + 1;
         StoreReview review = Instance;
-        if (review.requesting || !review.IsMilestone(level)) return;
+        if (HasRated || review.requesting || !review.IsMilestone(level)) return;
 
         // Levels can be replayed: ask once per milestone, not every time it's won
         string key = KeyLastLevel + mode;
@@ -72,8 +80,8 @@ public class StoreReview : MonoBehaviour
         }
         PlayerPrefs.Save();
 
-        Debug.Log($"[StoreReview] Mode {mode} level {level} won: requesting review (ad skipped: {skipNextAd})");
-        review.StartCoroutine(review.Request());
+        Debug.Log($"[StoreReview] Mode {mode} level {level} won: asking for a rating (ad skipped: {skipNextAd})");
+        review.StartCoroutine(review.AskRating(null));
     }
 
     /// <summary>Mode 3: call when an Open World run starts.</summary>
@@ -90,7 +98,7 @@ public class StoreReview : MonoBehaviour
     public static void BeforeOpenWorldFail(System.Action showFailPanel)
     {
         StoreReview review = Instance;
-        bool ask = !review.requesting
+        bool ask = !HasRated && !review.requesting
                    && PlayerPrefs.GetInt(KeyOpenWorldAsked, 0) == 0
                    && PlayerPrefs.GetInt(KeyOpenWorldRuns, 0) >= review.openWorldRunsBeforeReview;
         if (!ask)
@@ -101,20 +109,47 @@ public class StoreReview : MonoBehaviour
 
         PlayerPrefs.SetInt(KeyOpenWorldAsked, 1);
         PlayerPrefs.Save();
-        Debug.Log($"[StoreReview] Open World run {PlayerPrefs.GetInt(KeyOpenWorldRuns, 0)} over: requesting review before the fail panel");
-        review.StartCoroutine(review.RequestThen(showFailPanel));
+        Debug.Log($"[StoreReview] Open World run {PlayerPrefs.GetInt(KeyOpenWorldRuns, 0)} over: asking for a rating before the fail panel");
+        review.StartCoroutine(review.AskRating(showFailPanel));
     }
 
-    IEnumerator RequestThen(System.Action onDone)
+    // Rate Us panel -> (4-5 stars) store review; onDone runs once the panel is closed and the store review
+    // (if any) has finished
+    IEnumerator AskRating(System.Action onDone)
     {
-        StartCoroutine(Request());
+        requesting = true;
+        yield return new WaitForSecondsRealtime(delaySeconds); // let the win / fail moment land first
+
+        bool panelClosed = false;
+        bool shown = RateUsPanel.Show(
+            onRated: stars =>
+            {
+                PlayerPrefs.SetInt(KeyRated, 1);
+                PlayerPrefs.SetInt(KeyRating, stars);
+                PlayerPrefs.Save();
+                Debug.Log($"[StoreReview] Rated {stars} star(s)" + (stars >= 4 ? ": opening the store review" : ""));
+                if (stars >= 4) StartCoroutine(NativeReview()); // while the stars fill
+            },
+            onClosed: () => panelClosed = true);
+
+        if (!shown) // no Rate Us prefab: straight to the store review, as before
+        {
+            Debug.LogWarning("[StoreReview] Resources/" + RateUsPanel.ResourcePath + " missing: opening the store review directly");
+            StartCoroutine(NativeReview());
+            panelClosed = true;
+        }
+
+        while (!panelClosed) yield return null;
+
         float waited = 0f;
-        while (requesting && waited < maxWaitBeforeFailPanel) // the flow ends when the dialog closes
+        while (nativeRunning && waited < maxWaitBeforeFailPanel) // the store flow ends when its dialog closes
         {
             waited += Time.unscaledDeltaTime;
             yield return null;
         }
-        if (requesting) Debug.LogWarning("[StoreReview] Review flow still running: showing the fail panel anyway");
+        if (nativeRunning) Debug.LogWarning("[StoreReview] Store review still running: continuing anyway");
+
+        requesting = false;
         onDone?.Invoke();
     }
 
@@ -133,10 +168,10 @@ public class StoreReview : MonoBehaviour
         return false;
     }
 
-    IEnumerator Request()
+    // Native store review (Google Play In-App Review / iOS)
+    IEnumerator NativeReview()
     {
-        requesting = true;
-        yield return new WaitForSecondsRealtime(delaySeconds); // the win panel is up with timeScale 0
+        nativeRunning = true;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         // ReviewInfo expires: request and launch back to back
@@ -146,7 +181,7 @@ public class StoreReview : MonoBehaviour
         if (requestFlow.Error != ReviewErrorCode.NoError)
         {
             Debug.LogWarning("[StoreReview] RequestReviewFlow failed: " + requestFlow.Error);
-            requesting = false;
+            nativeRunning = false;
             yield break;
         }
 
@@ -156,10 +191,12 @@ public class StoreReview : MonoBehaviour
         Debug.Log("[StoreReview] LaunchReviewFlow finished: " + launchFlow.Error);
 #elif UNITY_IOS && !UNITY_EDITOR
         UnityEngine.iOS.Device.RequestStoreReview();
+        yield return null;
 #else
         Debug.Log("[StoreReview] (Editor) a review would be requested here.");
+        yield return null;
 #endif
-        requesting = false;
+        nativeRunning = false;
     }
 
 #if UNITY_EDITOR
@@ -170,6 +207,8 @@ public class StoreReview : MonoBehaviour
         PlayerPrefs.DeleteKey(KeyAdSkipUsed);
         PlayerPrefs.DeleteKey(KeyOpenWorldRuns);
         PlayerPrefs.DeleteKey(KeyOpenWorldAsked);
+        PlayerPrefs.DeleteKey(KeyRated);
+        PlayerPrefs.DeleteKey(KeyRating);
         PlayerPrefs.Save();
         Debug.Log("[StoreReview] Review state cleared: milestones will ask again.");
     }

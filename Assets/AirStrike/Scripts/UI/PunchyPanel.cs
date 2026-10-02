@@ -50,6 +50,7 @@ public class PunchyPanel : MonoBehaviour
     {
         if (rect == null) return;
         if (playing != null) StopCoroutine(playing);
+        if (Application.isPlaying) GameSfx.Popup(); // soft whoosh as the popup opens
 
         // Hide the panel right away: showing it at full size during startDelay and then snapping to
         // zero made it flash in, vanish and pop in again. Only the panel itself — children are zeroed
