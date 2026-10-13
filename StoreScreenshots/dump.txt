@@ -1,0 +1,53 @@
+Scene: Assets/AirStrike/Demo/Classic.unity
+Player: WW2 at (-326.71, 138.12, 433.53) radius 8.9
+Camera: FlightCamera far 10000
+
+Root objects:
+  - HUD Navigation Canvas  (4 children)
+  + HUD System  (0 children)
+  - Directional light (1)  (0 children)
+  + Terrain  (3 children)
+  - SpawnerFriend  (0 children)
+  + FlightCamera  (0 children)
+  + WW2  (7 children)
+  + CF2-Aircraft-Rig  (1 children)
+  + Canvas  (6 children)
+  + EventSystem  (0 children)
+  + Levels  (6 children)
+  - Fighter  (8 children)
+  + New Game Object  (0 children)
+
+Script types (active / total):
+  AdBehaviour: 1/1   [New Game Object]
+  CameraSway: 1/4   [Camera, BackCamera, GunCamera]
+  DamageManager: 1/16   [Collider, hotAirBallonTutorial (1), Generator (1), WW2, Generator, hotAirBallonTutorial]
+  EnemySpawner: 0/4   [SpawnerFriend, SpawnerEnemy]
+  FlightOnHit: 1/2   [WW2, Fighter]
+  FlightSystem: 1/2   [WW2, Fighter]
+  FlightView: 1/1   [FlightCamera]
+  GameManager: 1/1   [FlightCamera]
+  GameNotifications: 1/1   [GameNotifications]
+  GameSfx: 1/1   [GameSfx]
+  GameUI: 1/1   [FlightCamera]
+  HealthBarFx: 1/1   [Slider]
+  Indicator: 1/2   [WW2, Fighter]
+  ModernIndicator: 0/1   [Fighter]
+  PlayerController: 1/2   [WW2, Fighter]
+  PlayerDead: 1/2   [WW2, Fighter]
+  PlayerManager: 1/2   [WW2, Fighter]
+  PunchyButton: 6/17   [resumebtn, nextbtn, restartbtn, Multiple, homebtn, NoThanksButton]
+  PunchyPanel: 1/5   [Pause, RevivePanel, FailPanel, ObjPanel, WinPanel]
+  RectAd: 0/3   [Pause, FailPanel, WinPanel]
+  TutorialManager: 1/1   [Level1 (0)]
+  WeaponController: 1/2   [WW2, Fighter]
+  WeaponLauncher: 3/7   [weapon_flakgun, weapon_minigun, weapon_rocket_A2, weapon_napalm, weapon_rocket]
+  Wheel: 1/1   [fan]
+
+Tagged Enemy:
+
+GameManager levels:
+  + Level1 (0): f16a, s1, s1 (1), s1 (2), s1 (3), hotAirBallonTutorial, hotAirBallonTutorial (1), hotAirBallonTutorial (3), s1 (4), s1 (5), s1 (6), sp player
+  - Level1: Generator, Generator (1), f16a, WS_NativeAd (2), WS_NativeAd (3), WS_NativeAd (4)
+  - Level2: SpawnerEnemy, Base, WS_NativeAd (4)
+  - Level3: SpawnerEnemy, Base, WS_NativeAd (4), WS_NativeAd (5)
+  - Level4: SpawnerEnemy, Base, Generator, Generator (1), WS_NativeAd (5), WS_NativeAd (6)
